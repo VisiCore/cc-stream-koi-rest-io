@@ -1,0 +1,10 @@
+vct_koi_api_base:
+  type: string
+  value: "'https://api.prod.koi.security/api/external/v2'"
+  description: Koi external API base URL (all collectors in this pack append their endpoint path)
+  tags: vct,koi
+vct_koi_secret_id:
+  type: string
+  value: "'vct-koi-rest-secret'"
+  description: Group-level text secret holding the Koi API key, sent as Authorization Bearer (packs cannot contain secrets)
+  tags: vct,koi

@@ -1,0 +1,45 @@
+id: default
+routes:
+- id: vct_koi_alerts
+  name: vct_koi_alerts
+  final: true
+  disabled: false
+  pipeline: vct_koi_alerts
+  description: Koi alerts from the pack collector. devnull is a placeholder; point
+    at your SIEM/lake destination.
+  enableOutputExpression: false
+  filter: datatype=='koi_alert'
+  clones: []
+  output: devnull
+- id: vct_koi_policies
+  name: vct_koi_policies
+  final: true
+  disabled: false
+  pipeline: vct_koi_policies
+  description: Koi policy snapshots from the pack collector. devnull is a placeholder;
+    point at your SIEM/lake destination.
+  enableOutputExpression: false
+  filter: datatype=='koi_policy'
+  clones: []
+  output: devnull
+- id: vct_koi_agent_activity_events
+  name: vct_koi_agent_activity_events
+  final: true
+  disabled: false
+  pipeline: vct_koi_agent_activity_events
+  description: Koi agent-activity events from the pack collector. devnull is a placeholder;
+    point at your SIEM/lake destination.
+  enableOutputExpression: false
+  filter: datatype=='koi_agent_activity_event'
+  clones: []
+  output: devnull
+- id: default
+  name: default
+  final: true
+  disabled: false
+  pipeline: main
+  description: ''
+  enableOutputExpression: false
+  filter: 'true'
+  clones: []
+  output: default

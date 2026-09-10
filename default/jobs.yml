@@ -1,0 +1,295 @@
+vct_koi_alerts:
+  type: collection
+  description: Koi alerts (GET /api/external/v2/alerts, OCSF finding events). Pages 500 at a time, state-tracked on the alert time so each run only asks for alerts newer than the last one collected. Events flow to the pack routes. Set the group secret named by vct_koi_secret_id before enabling the schedule.
+  ttl: 4h
+  ignoreGroupJobsLimit: false
+  removeFields: []
+  resumeOnBoot: false
+  streamtags:
+  - vct
+  - koi
+  workerAffinity: false
+  schedule:
+    enabled: false
+    cronSchedule: '*/15 * * * *'
+    tz: UTC
+    maxConcurrentRuns: 1
+    skippable: true
+    run:
+      mode: run
+      rescheduleDroppedTasks: true
+      maxTaskReschedule: 1
+      logLevel: info
+      jobTimeout: 30m
+      timeRangeType: relative
+      earliest: -1h
+      latest: now
+      timestampTimezone: UTC
+      expression: _time > (__collectible.state.latestTime || 0)
+      minTaskSize: 1MB
+      maxTaskSize: 10MB
+      stateTracking:
+        enabled: true
+        stateUpdateExpression: '__timestampExtracted !== false && {latestTime: (state.latestTime || 0) > _time ? state.latestTime : _time}'
+        stateMergeExpression: '(prevState.latestTime || 0) > newState.latestTime ? prevState : newState'
+  collector:
+    type: rest
+    destructive: false
+    encoding: utf8
+    conf:
+      discovery:
+        discoverType: none
+      collectMethod: get
+      collectUrl: '`${C.vars.vct_koi_api_base}/alerts`'
+      collectRequestParams:
+      - name: created_at_gte
+        value: '`${new Date(((typeof state !== ''undefined'' && state && state.latestTime) ? state.latestTime : (earliest || Date.now()/1000 - 3600)) * 1000).toISOString()}`'
+      - name: created_at_lte
+        value: '`${new Date((latest || Date.now()/1000) * 1000).toISOString()}`'
+      - name: sort_direction
+        value: '''asc'''
+      collectRequestHeaders:
+      - name: Authorization
+        value: '`Bearer ${C.Secret(C.vars.vct_koi_secret_id, ''text'').value}`'
+      - name: Accept
+        value: '''application/json'''
+      authentication: none
+      pagination:
+        type: request_page
+        pageField: page
+        sizeField: page_size
+        size: 500
+        zeroIndexed: false
+        totalRecordField: total_count
+        maxPages: 0
+      timeout: 60
+      useRoundRobinDns: false
+      disableTimeFilter: false
+      decodeUrl: true
+      rejectUnauthorized: true
+      captureHeaders: false
+      stopOnEmptyResults: true
+      safeHeaders: []
+      retryRules:
+        type: backoff
+        interval: 2000
+        limit: 5
+        multiplier: 2
+        maxIntervalMs: 60000
+        codes:
+        - 429
+        - 503
+        enableHeader: true
+        retryHeaderName: retry-after
+        retryConnectTimeout: false
+        retryConnectReset: false
+      __scheduling:
+        stateTracking: {}
+  input:
+    type: collection
+    staleChannelFlushMs: 10000
+    sendToRoutes: true
+    preprocess:
+      disabled: true
+    throttleRatePerSec: '0'
+    breakerRulesets:
+    - vct-koi-alerts
+    metadata:
+    - name: datatype
+      value: '''koi_alert'''
+    - name: source
+      value: '''koi:alerts'''
+  savedState: {}
+  notifications: []
+vct_koi_policies:
+  type: collection
+  description: Koi policies snapshot (GET /api/external/v2/policies). Full list every run, 500 per page, no state tracking; _time is the collection time. Events flow to the pack routes. Set the group secret named by vct_koi_secret_id before enabling the schedule.
+  ttl: 4h
+  ignoreGroupJobsLimit: false
+  removeFields: []
+  resumeOnBoot: false
+  streamtags:
+  - vct
+  - koi
+  workerAffinity: false
+  schedule:
+    enabled: false
+    cronSchedule: '0 */6 * * *'
+    tz: UTC
+    maxConcurrentRuns: 1
+    skippable: true
+    run:
+      mode: run
+      rescheduleDroppedTasks: true
+      maxTaskReschedule: 1
+      logLevel: info
+      jobTimeout: 30m
+      timeRangeType: relative
+      earliest: -1h
+      latest: now
+      timestampTimezone: UTC
+      expression: 'true'
+      minTaskSize: 1MB
+      maxTaskSize: 10MB
+  collector:
+    type: rest
+    destructive: false
+    encoding: utf8
+    conf:
+      discovery:
+        discoverType: none
+      collectMethod: get
+      collectUrl: '`${C.vars.vct_koi_api_base}/policies`'
+      collectRequestParams: []
+      collectRequestHeaders:
+      - name: Authorization
+        value: '`Bearer ${C.Secret(C.vars.vct_koi_secret_id, ''text'').value}`'
+      - name: Accept
+        value: '''application/json'''
+      authentication: none
+      pagination:
+        type: request_page
+        pageField: page
+        sizeField: page_size
+        size: 500
+        zeroIndexed: false
+        totalRecordField: total_count
+        maxPages: 0
+      timeout: 60
+      useRoundRobinDns: false
+      disableTimeFilter: true
+      decodeUrl: true
+      rejectUnauthorized: true
+      captureHeaders: false
+      stopOnEmptyResults: true
+      safeHeaders: []
+      retryRules:
+        type: backoff
+        interval: 2000
+        limit: 5
+        multiplier: 2
+        maxIntervalMs: 60000
+        codes:
+        - 429
+        - 503
+        enableHeader: true
+        retryHeaderName: retry-after
+        retryConnectTimeout: false
+        retryConnectReset: false
+  input:
+    type: collection
+    staleChannelFlushMs: 10000
+    sendToRoutes: true
+    preprocess:
+      disabled: true
+    throttleRatePerSec: '0'
+    breakerRulesets:
+    - vct-koi-policies
+    metadata:
+    - name: datatype
+      value: '''koi_policy'''
+    - name: source
+      value: '''koi:policies'''
+  savedState: {}
+  notifications: []
+vct_koi_agent_activity_events:
+  type: collection
+  description: Koi AI coding-agent activity events (GET /api/external/v2/agent-activity/events). The API requires a window of at most 24h ending no later than now; created_at_gte is the last collected event time (state tracking), clamped to 24h before created_at_lte, so a gap longer than 24h is skipped (backfill manually). Events flow to the pack routes.
+  ttl: 4h
+  ignoreGroupJobsLimit: false
+  removeFields: []
+  resumeOnBoot: false
+  streamtags:
+  - vct
+  - koi
+  workerAffinity: false
+  schedule:
+    enabled: false
+    cronSchedule: '*/15 * * * *'
+    tz: UTC
+    maxConcurrentRuns: 1
+    skippable: true
+    run:
+      mode: run
+      rescheduleDroppedTasks: true
+      maxTaskReschedule: 1
+      logLevel: info
+      jobTimeout: 30m
+      timeRangeType: relative
+      earliest: -1h
+      latest: now
+      timestampTimezone: UTC
+      expression: _time > (__collectible.state.latestTime || 0)
+      minTaskSize: 1MB
+      maxTaskSize: 10MB
+      stateTracking:
+        enabled: true
+        stateUpdateExpression: '__timestampExtracted !== false && {latestTime: (state.latestTime || 0) > _time ? state.latestTime : _time}'
+        stateMergeExpression: '(prevState.latestTime || 0) > newState.latestTime ? prevState : newState'
+  collector:
+    type: rest
+    destructive: false
+    encoding: utf8
+    conf:
+      discovery:
+        discoverType: none
+      collectMethod: get
+      collectUrl: '`${C.vars.vct_koi_api_base}/agent-activity/events`'
+      collectRequestParams:
+      - name: created_at_gte
+        value: '`${new Date(Math.max(((typeof state !== ''undefined'' && state && state.latestTime) ? state.latestTime : (earliest || Date.now()/1000 - 3600)), Math.min((latest || Date.now()/1000), Date.now()/1000) - 86340) * 1000).toISOString()}`'
+      - name: created_at_lte
+        value: '`${new Date(Math.min((latest || Date.now()/1000), Date.now()/1000) * 1000).toISOString()}`'
+      collectRequestHeaders:
+      - name: Authorization
+        value: '`Bearer ${C.Secret(C.vars.vct_koi_secret_id, ''text'').value}`'
+      - name: Accept
+        value: '''application/json'''
+      authentication: none
+      pagination:
+        type: request_page
+        pageField: page
+        sizeField: page_size
+        size: 500
+        zeroIndexed: false
+        totalRecordField: total_count
+        maxPages: 0
+      timeout: 60
+      useRoundRobinDns: false
+      disableTimeFilter: false
+      decodeUrl: true
+      rejectUnauthorized: true
+      captureHeaders: false
+      stopOnEmptyResults: true
+      safeHeaders: []
+      retryRules:
+        type: backoff
+        interval: 2000
+        limit: 5
+        multiplier: 2
+        maxIntervalMs: 60000
+        codes:
+        - 429
+        - 503
+        enableHeader: true
+        retryHeaderName: retry-after
+        retryConnectTimeout: false
+        retryConnectReset: false
+      __scheduling:
+        stateTracking: {}
+  input:
+    type: collection
+    staleChannelFlushMs: 10000
+    sendToRoutes: true
+    preprocess:
+      disabled: true
+    throttleRatePerSec: '0'
+    breakerRulesets:
+    - vct-koi-agent-activity-events
+    metadata:
+    - name: datatype
+      value: '''koi_agent_activity_event'''
+    - name: source
+      value: '''koi:agent-activity-events'''
+  savedState: {}
+  notifications: []

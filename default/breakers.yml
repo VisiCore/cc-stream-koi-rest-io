@@ -1,0 +1,82 @@
+vct-koi-alerts:
+  description: 'Koi GET /alerts: break the alerts[] array (OCSF finding events) into events, _time from the epoch-millisecond time field'
+  tags: vct,koi,rest
+  minRawLength: 256
+  rules:
+  - name: koi_alerts
+    condition: 'true'
+    type: json_array
+    jsonArrayField: alerts
+    jsonExtractAll: true
+    timestampAnchorRegex: /"time":\s*/
+    jsonTimeField: time
+    timestamp:
+      type: auto
+      length: 150
+    timestampTimezone: UTC
+    timestampEarliest: -420weeks
+    timestampLatest: +1week
+    maxEventBytes: 5000000
+    disabled: false
+    parserEnabled: false
+    shouldUseDataRaw: false
+    eventBreakerRegex: /[\n\r]+(?!\s)/
+    fields:
+    - name: sourcetype
+      value: '''koi:alert'''
+    - name: datatype
+      value: '''koi_alert'''
+vct-koi-policies:
+  description: 'Koi GET /policies: break the policies[] array into events; _time is the collection time (snapshot), created_at/updated_at stay as fields'
+  tags: vct,koi,rest
+  minRawLength: 256
+  rules:
+  - name: koi_policies
+    condition: 'true'
+    type: json_array
+    jsonArrayField: policies
+    jsonExtractAll: true
+    timestampAnchorRegex: /^/
+    timestamp:
+      type: current
+    timestampTimezone: UTC
+    timestampEarliest: -420weeks
+    timestampLatest: +1week
+    maxEventBytes: 5000000
+    disabled: false
+    parserEnabled: false
+    shouldUseDataRaw: false
+    eventBreakerRegex: /[\n\r]+(?!\s)/
+    fields:
+    - name: sourcetype
+      value: '''koi:policy'''
+    - name: datatype
+      value: '''koi_policy'''
+vct-koi-agent-activity-events:
+  description: 'Koi GET /agent-activity/events: break the data[] array into events, _time from the ISO 8601 timestamp field'
+  tags: vct,koi,rest
+  minRawLength: 256
+  rules:
+  - name: koi_agent_activity_events
+    condition: 'true'
+    type: json_array
+    jsonArrayField: data
+    jsonExtractAll: true
+    timestampAnchorRegex: /"timestamp":\s*"/
+    jsonTimeField: timestamp
+    timestamp:
+      type: auto
+      length: 150
+    timestampTimezone: UTC
+    timestampEarliest: -420weeks
+    timestampLatest: +1week
+    maxEventBytes: 5000000
+    disabled: false
+    parserEnabled: false
+    shouldUseDataRaw: false
+    eventBreakerRegex: /[\n\r]+(?!\s)/
+    fields:
+    - name: sourcetype
+      value: '''koi:agent_activity_event'''
+    - name: datatype
+      value: '''koi_agent_activity_event'''

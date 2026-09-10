@@ -1,0 +1,8 @@
+output: default
+streamtags:
+- vct
+- koi
+groups: {}
+asyncFuncTimeout: 1000
+description: Koi AI coding-agent activity events. Intentionally empty; add your own functions downstream or here.
+functions: []
